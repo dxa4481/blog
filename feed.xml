@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.0">Jekyll</generator><link href="http://0.0.0.0:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://0.0.0.0:4000/blog/" rel="alternate" type="text/html" /><updated>2020-12-18T11:00:08-06:00</updated><id>http://0.0.0.0:4000/blog/feed.xml</id><title type="html">GCP Privlige Escalation and Lateral Movement</title><subtitle>This is a writeup that summarizes the 12 some months Allison and Dylan worked with Google to disclose and partially remediate a series of security design anti-patterns in the GCP platform that allows for widespread privlige escalation and lateral movement </subtitle><entry><title type="html">Fixing a Google Vulnerability</title><link href="http://0.0.0.0:4000/blog/gcp/2020/11/22/lateral-movement-and-privesc-in-GCP.html" rel="alternate" type="text/html" title="Fixing a Google Vulnerability" /><published>2020-11-22T18:08:23-06:00</published><updated>2020-11-22T18:08:23-06:00</updated><id>http://0.0.0.0:4000/blog/gcp/2020/11/22/lateral-movement-and-privesc-in-GCP</id><content type="html" xml:base="http://0.0.0.0:4000/blog/gcp/2020/11/22/lateral-movement-and-privesc-in-GCP.html">&lt;h3 id=&quot;overview&quot;&gt;Overview&lt;/h3&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.0">Jekyll</generator><link href="http://0.0.0.0:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://0.0.0.0:4000/blog/" rel="alternate" type="text/html" /><updated>2020-12-18T11:05:33-06:00</updated><id>http://0.0.0.0:4000/blog/feed.xml</id><title type="html">GCP Privlige Escalation and Lateral Movement</title><subtitle>This is a writeup that summarizes the 12 some months Allison and Dylan worked with Google to disclose and partially remediate a series of security design anti-patterns in the GCP platform that allows for widespread privlige escalation and lateral movement </subtitle><entry><title type="html">Fixing a Google Vulnerability</title><link href="http://0.0.0.0:4000/blog/gcp/2020/11/22/lateral-movement-and-privesc-in-GCP.html" rel="alternate" type="text/html" title="Fixing a Google Vulnerability" /><published>2020-11-22T18:08:23-06:00</published><updated>2020-11-22T18:08:23-06:00</updated><id>http://0.0.0.0:4000/blog/gcp/2020/11/22/lateral-movement-and-privesc-in-GCP</id><content type="html" xml:base="http://0.0.0.0:4000/blog/gcp/2020/11/22/lateral-movement-and-privesc-in-GCP.html">&lt;h3 id=&quot;overview&quot;&gt;Overview&lt;/h3&gt;
 &lt;p&gt;This post details the journey it took to get Google issue numbers &lt;a href=&quot;https://issuetracker.google.com/u/1/issues/134447889&quot;&gt;134447889&lt;/a&gt; and &lt;a href=&quot;https://issuetracker.google.com/u/1/issues/155544987&quot;&gt;155544987&lt;/a&gt; closed out and resolved.&lt;/p&gt;
 
 &lt;p&gt;This post focuses more on the process and political mechanics of the bug fixes, which contrasts and complements our 2020 Blackhat talk which focuses on the technical details which you can find below:&lt;/p&gt;
@@ -19,7 +19,7 @@
 
 &lt;p&gt;Roughly 2 years ago I (&lt;a href=&quot;https://twitter.com/insecurenature&quot;&gt;@InsecureNature&lt;/a&gt;) shared an Uber ride home with &lt;a href=&quot;https://twitter.com/marcnewlin&quot;&gt;Marc Newlin&lt;/a&gt; who in the time span of about 15 minutes detailed a way an attacker could trivially compromise GCP organizations running with default settings, default access patterns and talented engineers doing their best to follow least privilege. This conversation went something like this:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;assets/marcchat.png&quot; alt=&quot;Marc Conversation&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/blog/assets/marcchat.png&quot; alt=&quot;Marc Conversation&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;Fast forward about a month later after &lt;a href=&quot;https://twitter.com/matter_of_cat&quot;&gt;matter_of_cat&lt;/a&gt; and myself explored the platform and found the defaults were in fact as dangerous as Marc warned them to be, we began to find other privilege escalation paths that seemed at their face to be clear cut vulnerabilities.&lt;/p&gt;
 
@@ -60,17 +60,17 @@
 
 &lt;p&gt;The reality is at Google, specifically in Google cloud, each product has its own project manager that is the informed captain and decision maker for that product. Their job is to constantly ask the question “Are we building the right thing?” and set the direction for the product. Below is a diagram of what that looks like:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;assets/pms.png&quot; alt=&quot;Marc Conversation&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/blog/assets/pms.png&quot; alt=&quot;Marc Conversation&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;PM’s pick a course for their product based on customer feedback, and customer data. A product that’s widely adopted and liked, makes for a successful PM.&lt;/p&gt;
 
 &lt;p&gt;You might wonder how security plays into this picture. Generally speaking, security sits on the sidelines consulting PM’s and offering input based on known risks, allowing PM’s to make more informed decisions. I’ve illustrated this to the best of my ability in the diagram below:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;assets/securityengineer.png&quot; alt=&quot;Security Engineer&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/blog/assets/securityengineer.png&quot; alt=&quot;Security Engineer&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;Of course the reality is likely more complicated than that, so doing my best to account for my own biases here’s a revised version:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;assets/fires.png&quot; alt=&quot;Security Engineer&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/blog/assets/fires.png&quot; alt=&quot;Security Engineer&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;So all that being said, here’s how I expect the conversation played out between June 14th and July 7th of 2019:&lt;/p&gt;
 
@@ -118,7 +118,7 @@
 
 &lt;p&gt;We went over this in great detail in our Blackhat video, but one piece we left off of the video, is we actually were able to find a number of IAM documents on the internet detailing the IAM of projects internal to the Google.com organization. These projects are used by Google internally and aren’t meant to be public. Naturally, we graphed them. Here’s an example of one below:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;assets/internalGoogle.png&quot; alt=&quot;Security Engineer&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/blog/assets/internalGoogle.png&quot; alt=&quot;Security Engineer&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;This graph shows identities that have role bindings to this central project &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ml pipeline test&lt;/code&gt;. We can’t see any of the role bindings going to any other projects, but this one gives us a story. We can see service accounts created in other projects (where the arrows are pointing) that have role bindings into this project. 4 of these roles could privilege escalate to project Owner. These are the same access patterns we identified in every other organization we looked at.&lt;/p&gt;
 
@@ -134,7 +134,7 @@
 
 &lt;p&gt;I remember very specifically going into a Google office, sitting down with them, and explaining everything on a whiteboard. They were professional, and great to work with.&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;assets/whiteboard.png&quot; alt=&quot;Whiteboard&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/blog/assets/whiteboard.png&quot; alt=&quot;Whiteboard&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;In my experience a Google PM is very “new feature” development focused. So if you could fix an issue with a new feature, we could make progress, but typically suggesting breaking backwards compatibility on an existing feature went nowhere.&lt;/p&gt;
 
@@ -177,7 +177,7 @@ have discussions about it.”&lt;/p&gt;
 
 &lt;p&gt;PM’s and Security Engineers all of a sudden came into perfect alignment and the following email got sent out to all customers using the above API’s&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;assets/thefix.png&quot; alt=&quot;Whiteboard&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/blog/assets/thefix.png&quot; alt=&quot;Whiteboard&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;One year after we reported the issue, many emails and in person meetings with Google PM’s and Security Engineers later, and one impending public disclosure, we were able to get this specific issue fixed.&lt;/p&gt;
 
